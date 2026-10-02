@@ -3768,6 +3768,22 @@ async function toggleSignalCoverage(){
 }
 
 // ===== Warning Timeline =====
+// Format warning msg: may be string / array of scene objects / single object
+function fmtWarnMsg(m){
+  if(!m)return '预警';
+  if(typeof m==='string')return m;
+  if(Array.isArray(m)){
+    const cnt={};
+    m.forEach(x=>{
+      const label=typeof x==='string'?x:(x&&(x.scene_name||x.name||x.label||x.type||x.scene))||'预警';
+      cnt[label]=(cnt[label]||0)+1;
+    });
+    return Object.entries(cnt).map(([k,c])=>c>1?k+'×'+c:k).join('、');
+  }
+  if(typeof m==='object')return m.scene_name||m.name||m.label||m.msg||m.type||'预警';
+  return String(m);
+}
+
 async function loadWarningTimeline(){
   const container=document.getElementById('warningTimeline');
   try{
@@ -3796,28 +3812,30 @@ async function loadWarningTimeline(){
         const time=w.create_time?w.create_time.substring(11,16):'';
         const level=w.max_level||0;
         const levelColor=level>=3?'var(--red)':level>=2?'var(--yellow)':'var(--blue)';
-        html+=`<div class="wt-line"><span class="wt-time">${time}</span><span class="wt-dot warn" style="background:${levelColor}"></span><span class="wt-text">⚠ ${w.msg||'预警'} (x${w.count||1})</span></div>`;
+        const msgText=fmtWarnMsg(w.msg)||'预警';
+        html+=`<div class="wt-line"><span class="wt-time">${time}</span><span class="wt-dot warn" style="background:${levelColor}"></span><span class="wt-text">⚠ ${msgText} (x${w.count||1})</span></div>`;
       });
     }
     // Render records
     if(d.data.record&&d.data.record.length){
       d.data.record.forEach(r=>{
         const time=r.create_time?r.create_time.substring(11,16):'';
-        html+=`<div class="wt-line"><span class="wt-time">${time}</span><span class="wt-dot record"></span><span class="wt-text">✈ ${r.msg||'飞行记录'} (x${r.count||1})</span></div>`;
+        const msgText=fmtWarnMsg(r.msg)||'飞行记录';
+        html+=`<div class="wt-line"><span class="wt-time">${time}</span><span class="wt-dot record"></span><span class="wt-text">✈ ${msgText} (x${r.count||1})</span></div>`;
       });
     }
     // Render logs
     if(d.data.logs&&d.data.logs.length){
       d.data.logs.forEach(l=>{
         const time=typeof l==='string'?l.substring(11,16):'';
-        html+=`<div class="wt-line"><span class="wt-time">${time}</span><span class="wt-dot log"></span><span class="wt-text">${typeof l==='string'?l:l.msg||'日志'}</span></div>`;
+        html+=`<div class="wt-line"><span class="wt-time">${time}</span><span class="wt-dot log"></span><span class="wt-text">${typeof l==='string'?l:fmtWarnMsg(l.msg)||'日志'}</span></div>`;
       });
     }
     if(!html)html='<div style="color:var(--text3);text-align:center;padding:10px;">暂无数据</div>';
     container.innerHTML=html;
   }catch(e){
     console.warn('Timeline err:',e);
-    container.innerHTML='<div style="color:var(--text3);text-align:center;padding:10px;">时间轴加载失败</div>';
+    show999Tip(container,'预警时间轴');
   }
 }
 
@@ -3846,7 +3864,7 @@ async function loadAiScenes(){
     }
   }catch(e){
     console.warn('AI scenes err:',e);
-    container.innerHTML='<div style="color:var(--text3);text-align:center;padding:10px;">AI场景加载失败</div>';
+    show999Tip(container,'AI场景识别');
   }
 }
 
